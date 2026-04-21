@@ -140,6 +140,7 @@ def _process_chunk(job_id: str, orig_path: str,
 def _process_job(job_id: str, orig_path: str, skip: int, conf: float) -> None:
     out_path      = orig_path + '_out.mp4'
     orig_out_path = orig_path + '_orig.mp4'
+    p_orig        = None   # Popen — original video re-encode, runs during inference
 
     try:
         cap      = cv2.VideoCapture(orig_path)
@@ -149,6 +150,16 @@ def _process_job(job_id: str, orig_path: str, skip: int, conf: float) -> None:
         h        = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
         cap.release()
         duration = round(total / fps, 2)
+
+        # Kick off original-video re-encode immediately — it only needs orig_path
+        # and will finish (or nearly finish) while inference is still running.
+        if _FFMPEG:
+            p_orig = subprocess.Popen(
+                [_FFMPEG, '-y', '-i', orig_path,
+                 *_H264, '-c:a', 'aac', '-b:a', '128k',
+                 '-movflags', '+faststart', '-loglevel', 'error',
+                 orig_out_path],
+            )
 
         chunks: list = []
         i = 0
@@ -220,17 +231,12 @@ def _process_job(job_id: str, orig_path: str, skip: int, conf: float) -> None:
                 if r2.returncode == 0 and os.path.exists(out_path) and os.path.getsize(out_path) > 0:
                     web_path = out_path
 
-                # ── clean output (original video, no annotations) ────────────
-                r3 = subprocess.run(
-                    [_FFMPEG, '-y', '-i', orig_path,
-                     *_H264,
-                     '-c:a', 'aac', '-b:a', '128k',
-                     '-movflags', '+faststart', '-loglevel', 'error',
-                     orig_out_path],
-                    capture_output=True, timeout=600,
-                )
-                if r3.returncode == 0 and os.path.exists(orig_out_path) and os.path.getsize(orig_out_path) > 0:
+            # Wait for the original re-encode that started during inference
+            if p_orig is not None:
+                p_orig.wait()
+                if p_orig.returncode == 0 and os.path.exists(orig_out_path) and os.path.getsize(orig_out_path) > 0:
                     orig_web_path = orig_out_path
+                p_orig = None
 
         to_del = (
             [p for p in chunk_paths if p] +
@@ -261,6 +267,12 @@ def _process_job(job_id: str, orig_path: str, skip: int, conf: float) -> None:
             }
 
     except Exception as exc:
+        if p_orig is not None:
+            try:
+                p_orig.kill()
+                p_orig.wait()
+            except Exception:
+                pass
         with _lock:
             _jobs[job_id] = {'status': 'error', 'error': str(exc)}
         sweep = [orig_path, out_path, orig_out_path,

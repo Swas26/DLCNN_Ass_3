@@ -358,6 +358,10 @@ function renderResults(file, data) {
 // ============================================================
 
 function updateOverlays(data) {
+  if (!_showAnnotations) {
+    brandOverlays.innerHTML = '';
+    return;
+  }
   const t = resultVideo.currentTime;
   let closest = data.frames[0], minDiff = Infinity;
   for (const f of data.frames) {
@@ -583,6 +587,8 @@ annToggleBtn.addEventListener('click', () => {
   const t          = resultVideo.currentTime;
   const wasPlaying = !resultVideo.paused;
   _showAnnotations = !_showAnnotations;
+
+  if (!_showAnnotations) brandOverlays.innerHTML = '';
 
   resultVideo.src = _showAnnotations ? _annotatedUrl : _originalUrl;
   resultVideo.addEventListener('loadeddata', () => {
