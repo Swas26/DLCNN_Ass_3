@@ -1,10 +1,6 @@
 # Pixel Pit Crew
 
-F1 sponsor brand detection app — upload race footage, get per-frame detection results, brand share analytics, and an annotated output video.
-
-Two interfaces ship together:
-- **Desktop app** (`app.py`) — tkinter GUI with a built-in video player and live treemap
-- **Web app** (`backend.py` + `static/`) — Flask API + browser UI, supports drag-and-drop upload and CSV export
+F1 sponsor brand detection web app — upload race footage, get per-frame detection results, brand share analytics, and an annotated output video.
 
 ---
 
@@ -12,13 +8,13 @@ Two interfaces ship together:
 
 Each video is run through a YOLOv8 model trained on F1 sponsor logos. Every frame (or every Nth frame, configurable) is passed through inference, bounding boxes are drawn on the annotated output, and detection data is aggregated into brand-level stats.
 
-The web backend splits videos into 2000-frame chunks processed in parallel threads, with batched inference (8 frames per model call) and hardware H.264 encoding on Apple Silicon via VideoToolbox.
+The backend splits videos into 2000-frame chunks processed in parallel threads, with batched inference (8 frames per model call) and hardware H.264 encoding on Apple Silicon via VideoToolbox.
 
 ---
 
 ## Setup
 
-**Requirements:** Python 3.10+, `ffmpeg` in PATH (web app only — for video encoding)
+**Requirements:** Python 3.10+, `ffmpeg` in PATH (for video encoding)
 
 ```bash
 # 1. Clone
@@ -42,16 +38,6 @@ pip install -r requirements.txt
 
 ## Running
 
-### Desktop app
-
-```bash
-python app.py
-```
-
-Opens a 1200×820 tkinter window. Load a video, click **Run Analysis**, scrub or play back the annotated result.
-
-### Web app
-
 ```bash
 python backend.py
 ```
@@ -60,24 +46,7 @@ Starts Flask on `http://0.0.0.0:5001`. Open that URL in a browser — the static
 
 ---
 
-## Desktop app walkthrough
-
-| Control | What it does |
-|---|---|
-| **Browse Video** | Open a video file (MP4, AVI, MOV, MKV) |
-| **Every N frame(s)** | Skip N−1 frames between predictions — higher = faster, less accurate |
-| **Run Analysis** | Process the video; progress bar updates live |
-| **Play / Pause / Restart** | Playback controls for the annotated output |
-| **Scrubber** | Seek to any frame; treemap and table update as you drag |
-| **Save Output Video** | Save the annotated MP4 to a location of your choice |
-
-The right panel shows:
-- **Treemap** — brand area proportional to cumulative detection count up to the current frame
-- **Table** — brand name, total occurrences, total bounding box area in px²
-
----
-
-## Web app walkthrough
+## Usage
 
 1. Drag a video onto the upload zone or click **Upload Video** (MP4, MOV, AVI, WebM supported, max 500 MB)
 2. Adjust **Min confidence** (default 0.40) — detections below this threshold are discarded
@@ -91,8 +60,6 @@ The right panel shows:
 ---
 
 ## REST API
-
-The backend exposes a small JSON API if you want to integrate with it directly.
 
 ### `POST /api/detect`
 
@@ -182,12 +149,11 @@ Stream the original video re-encoded to H.264 (used for the annotation toggle). 
 
 ```
 .
-├── app.py              # Desktop GUI (tkinter)
-├── backend.py          # Web backend (Flask)
+├── backend.py          # Flask server
 ├── requirements.txt
 ├── model/
 │   └── best.pt         # Trained YOLOv8 weights
-└── static/             # Web frontend (served by Flask)
+└── static/             # Frontend (served by Flask)
     ├── index.html
     ├── app.js
     └── style.css

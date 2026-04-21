@@ -1,8 +1,5 @@
 flask>=3.0
 opencv-python==4.13.0.92
-matplotlib==3.10.8
-pillow==12.2.0
-squarify==0.4.4
 ultralytics==8.4.36
 torch==2.11.0
 torchvision==0.26.0
