@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pixel Pit Crew — Brand Recognition</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- ===== HEADER ===== -->
+  <header class="app-header">
+    <div class="header-inner">
+      <!-- UTS Logo -->
+      <div class="uts-logo">
+        <img src="UTSLogoFullVersionPrimaryRGBBLK.jpg" alt="UTS — University of Technology Sydney" class="uts-logo-img" />
+        <span class="uts-divider"></span>
+        <span class="uts-sub">Pixel Pit Crew</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- ===== MAIN CONTENT ===== -->
+  <main class="app-main">
+
+    <!-- SCREEN 1: UPLOAD -->
+    <section id="screen-upload" class="screen active">
+      <h1 class="screen-title">Brand Recognition</h1>
+      <p class="screen-subtitle">Upload a race video to detect sponsor brands frame by frame.</p>
+
+      <div class="upload-card" id="drop-zone">
+        <input type="file" id="file-input" accept="video/*" hidden />
+        <div class="upload-icon">
+          <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="32" cy="32" r="30" stroke="#111" stroke-width="2.5"/>
+            <polygon points="26,20 26,44 46,32" fill="#111"/>
+          </svg>
+        </div>
+        <p class="upload-label">Choose a video for Brands Recognition</p>
+        <p class="upload-hint">Drag &amp; drop or click below — MP4, MOV, AVI supported</p>
+        <div class="threshold-row">
+          <label class="thresh-label">Min confidence</label>
+          <input type="range" id="conf-input" class="thresh-slider" min="0.10" max="0.90" step="0.05" value="0.40" />
+          <span id="conf-display" class="thresh-value">0.40</span>
+        </div>
+        <button class="btn btn-primary" id="upload-btn">Upload Video</button>
+      </div>
+    </section>
+
+    <!-- SCREEN 2: LOADING -->
+    <section id="screen-loading" class="screen">
+      <div class="loading-card">
+        <div class="spinner"></div>
+        <p class="loading-label">Processing…</p>
+        <p class="loading-hint" id="loading-hint-text">Preparing your video.</p>
+        <div class="bars-container" id="bars-container"></div>
+      </div>
+    </section>
+
+    <!-- SCREEN 3a: RESULTS (success) -->
+    <section id="screen-results" class="screen">
+      <div class="results-layout">
+
+        <!-- Left: video player -->
+        <div class="video-panel">
+          <div class="video-wrapper">
+            <video id="result-video" controls playsinline></video>
+            <div class="brand-overlays" id="brand-overlays"></div>
+            <button class="ann-toggle-btn" id="ann-toggle-btn" title="Toggle annotations" style="display:none">
+              <svg viewBox="0 0 20 20" fill="currentColor"><path d="M10 3C5 3 1.7 7.4 1.1 9.8a.7.7 0 0 0 0 .4C1.7 12.6 5 17 10 17s8.3-4.4 8.9-6.8a.7.7 0 0 0 0-.4C18.3 7.4 15 3 10 3Zm0 11a4 4 0 1 1 0-8 4 4 0 0 1 0 8Zm0-6.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5Z"/></svg>
+              <span id="ann-toggle-label">Annotations ON</span>
+            </button>
+          </div>
+          <div class="video-meta" id="video-meta"></div>
+        </div>
+
+        <!-- Right: detection table -->
+        <div class="table-panel">
+          <div class="table-header">
+            <span class="table-title">Detection Results</span>
+            <span class="table-badge" id="frame-badge">— frames</span>
+          </div>
+          <div class="table-scroll">
+            <table class="results-table" id="results-table">
+              <thead>
+                <tr id="table-head-row"></tr>
+              </thead>
+              <tbody id="table-body"></tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Brand share chart — powered by detection data -->
+      <div class="brand-share-panel" id="brand-share-panel">
+        <div class="table-header">
+          <span class="table-title">Brand Share</span>
+          <span class="table-badge">by detection count</span>
+        </div>
+        <div class="share-bars" id="share-bars"></div>
+      </div>
+
+      <div class="results-actions">
+        <button class="btn btn-outline" id="reupload-btn">Reupload</button>
+        <button class="btn btn-primary" id="export-btn">Export CSV</button>
+      </div>
+    </section>
+
+    <!-- SCREEN 3b: ERROR (unsupported file) -->
+    <section id="screen-error" class="screen">
+      <div class="error-card">
+        <div class="error-icon">
+          <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="32" cy="32" r="30" stroke="#111" stroke-width="2.5"/>
+            <line x1="22" y1="22" x2="42" y2="42" stroke="#111" stroke-width="3" stroke-linecap="round"/>
+            <line x1="42" y1="22" x2="22" y2="42" stroke="#111" stroke-width="3" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <h2 class="error-title">File Not Supported</h2>
+        <p class="error-msg" id="error-msg">The selected file format is not supported. Please upload an MP4, MOV, or AVI video.</p>
+        <button class="btn btn-primary" id="error-reupload-btn">Try Again</button>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ===== STEP INDICATOR ===== -->
+  <footer class="step-footer">
+    <div class="steps">
+      <div class="step" id="step-1">
+        <span class="step-num">1</span>
+        <span class="step-label">Upload a video</span>
+      </div>
+      <div class="step-divider"></div>
+      <div class="step" id="step-2">
+        <span class="step-num">2</span>
+        <span class="step-label">Wait for processing</span>
+      </div>
+      <div class="step-divider"></div>
+      <div class="step" id="step-3">
+        <span class="step-num">3</span>
+        <span class="step-label">View brand detections</span>
+      </div>
+    </div>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>

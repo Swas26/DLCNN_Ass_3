@@ -1,0 +1,21 @@
+# Virtual environment
+.venv/
+
+# Claude config
+.claude/
+
+# Annotated output videos (generated at runtime)
+*_annotated.mp4
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# macOS
+.DS_Store
+
+# Model weights (track best.pt, ignore everything else)
+*.pt
+*.pth
+!model/best.pt
