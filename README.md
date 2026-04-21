@@ -6,7 +6,7 @@ F1 sponsor brand detection web app — upload race footage, get per-frame detect
 
 ## How it works
 
-Each video is run through a YOLOv8 model trained on F1 sponsor logos. Every frame (or every Nth frame, configurable) is passed through inference, bounding boxes are drawn on the annotated output, and detection data is aggregated into brand-level stats.
+Each video is run through a YOLOv8 model trained on F1 sponsor logos. Every frame is passed through inference, bounding boxes are drawn on the annotated output, and detection data is aggregated into brand-level stats.
 
 The backend splits videos into 2000-frame chunks processed in parallel threads, with batched inference (8 frames per model call) and hardware H.264 encoding on Apple Silicon via VideoToolbox.
 
@@ -48,14 +48,14 @@ Starts Flask on `http://0.0.0.0:5001`. Open that URL in a browser — the static
 
 ## Usage
 
-1. Drag a video onto the upload zone or click **Upload Video** (MP4, MOV, AVI, WebM supported, max 500 MB)
+1. Drag a video onto the upload zone or click **Upload Video** (MP4, MOV, AVI, WebM supported @ max 500 MB)
 2. Adjust **Min confidence** (default 0.40) — detections below this threshold are discarded
-3. Processing runs server-side; a per-chunk progress bar shows in real time
+3. Processing runs server-side; 
 4. Results screen shows:
    - Annotated video player with an **Annotations ON/OFF** toggle
    - Detection table (brand, occurrences, confidence, frame timestamps)
    - **Brand Share** bar chart by detection count
-5. Click **Export CSV** to download the full per-frame detection data
+5. Click **Export CSV** to download the full per-frame  data
 
 ---
 
@@ -70,7 +70,6 @@ Upload a video for processing.
 | Field | Type | Default | Description |
 |---|---|---|---|
 | `video` | file | required | Video file (MP4, MOV, AVI, WebM, OGV) |
-| `skip` | int | `1` | Process every Nth frame (1–30) |
 | `conf` | float | `0.40` | Minimum confidence threshold (0.01–0.99) |
 
 **Response:**
