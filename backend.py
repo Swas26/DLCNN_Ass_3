@@ -17,7 +17,7 @@ _DEVICE      = 'mps' if platform.machine() == 'arm64' else 'cpu'
 _HALF        = _DEVICE in ('cuda', 'mps')   # FP16 on GPU/MPS, ~50% faster inference
 STATIC_DIR   = Path(__file__).parent / 'static'
 CHUNK_FRAMES = 2000
-BATCH_SIZE   = 8   # frames sent to model in one call 
+BATCH_SIZE   = 32  # frames sent to model in one call
 
 app = Flask(__name__, static_folder=str(STATIC_DIR), static_url_path='')
 app.config['MAX_CONTENT_LENGTH'] = 500 * 1024 * 1024  # 500 MB
@@ -31,12 +31,16 @@ _FFMPEG           = shutil.which('ffmpeg')
 
 
 def _h264_args() -> list:
-    """Return ffmpeg video-codec args — hardware encoder on Mac, software elsewhere."""
-    if _FFMPEG and platform.system() == 'Darwin':
-        r = subprocess.run([_FFMPEG, '-hide_banner', '-encoders'],
-                           capture_output=True, text=True, timeout=10)
-        if 'h264_videotoolbox' in (r.stdout or ''):
-            return ['-c:v', 'h264_videotoolbox', '-b:v', '8M']
+    """Return ffmpeg video-codec args — hardware encoder where available, software fallback."""
+    if not _FFMPEG:
+        return ['-c:v', 'libx264', '-preset', 'veryfast', '-crf', '23']
+    r = subprocess.run([_FFMPEG, '-hide_banner', '-encoders'],
+                       capture_output=True, text=True, timeout=10)
+    encoders = r.stdout or ''
+    if 'h264_nvenc' in encoders:
+        return ['-c:v', 'h264_nvenc', '-preset', 'p4', '-cq', '23']
+    if 'h264_videotoolbox' in encoders:
+        return ['-c:v', 'h264_videotoolbox', '-b:v', '8M']
     return ['-c:v', 'libx264', '-preset', 'veryfast', '-crf', '23']
 
 _H264 = _h264_args()
@@ -44,7 +48,7 @@ _H264 = _h264_args()
 # Base model for class-name lookup; workers use thread-local copies
 _base_model = YOLO('model/best.pt')
 
-
+# each thread gets its one yolo 
 def _get_model() -> YOLO:
     if not hasattr(_thread_local, 'model'):
         _thread_local.model = YOLO('model/best.pt')
@@ -161,6 +165,7 @@ def _process_job(job_id: str, orig_path: str, skip: int, conf: float) -> None:
                  orig_out_path],
             )
 
+        # chunking ...
         chunks: list = []
         i = 0
         while i < total:
@@ -203,33 +208,27 @@ def _process_job(job_id: str, orig_path: str, skip: int, conf: float) -> None:
         orig_web_path = None
 
         if _FFMPEG:
-            concat_txt   = orig_path + '_concat.txt'
-            ann_combined = orig_path + '_ann.avi'
+            concat_txt = orig_path + '_concat.txt'
 
             with open(concat_txt, 'w') as f:
                 for p in chunk_paths:
                     f.write(f"file '{p}'\n")
 
+            # Single pass: concat chunks + mux audio directly to H.264 (no intermediate AVI)
             r1 = subprocess.run(
-                [_FFMPEG, '-y', '-f', 'concat', '-safe', '0',
-                 '-i', concat_txt, '-c', 'copy', ann_combined],
+                [_FFMPEG, '-y',
+                 '-f', 'concat', '-safe', '0', '-i', concat_txt,
+                 '-i', orig_path,
+                 '-map', '0:v:0', '-map', '1:a:0?',
+                 *_H264,
+                 '-c:a', 'aac', '-b:a', '128k',
+                 '-movflags', '+faststart', '-loglevel', 'error',
+                 out_path],
                 capture_output=True, timeout=600,
             )
 
-            if r1.returncode == 0 and os.path.exists(ann_combined):
-                # ── annotated output (chunks + audio) ───────────────────────
-                r2 = subprocess.run(
-                    [_FFMPEG, '-y',
-                     '-i', ann_combined, '-i', orig_path,
-                     '-map', '0:v:0', '-map', '1:a:0?',
-                     *_H264,
-                     '-c:a', 'aac', '-b:a', '128k',
-                     '-movflags', '+faststart', '-loglevel', 'error',
-                     out_path],
-                    capture_output=True, timeout=600,
-                )
-                if r2.returncode == 0 and os.path.exists(out_path) and os.path.getsize(out_path) > 0:
-                    web_path = out_path
+            if r1.returncode == 0 and os.path.exists(out_path) and os.path.getsize(out_path) > 0:
+                web_path = out_path
 
             # Wait for the original re-encode that started during inference
             if p_orig is not None:
@@ -240,7 +239,7 @@ def _process_job(job_id: str, orig_path: str, skip: int, conf: float) -> None:
 
         to_del = (
             [p for p in chunk_paths if p] +
-            [orig_path, orig_path + '_concat.txt', orig_path + '_ann.avi']
+            [orig_path, orig_path + '_concat.txt']
         )
         for p in to_del:
             if p not in (web_path, orig_web_path):
