@@ -13,7 +13,11 @@ import cv2
 from flask import Flask, jsonify, request, send_file, send_from_directory
 from ultralytics import YOLO
 
-_DEVICE      = 'mps' if platform.machine() == 'arm64' else 'cpu'
+if platform.system() == 'Darwin':
+    _DEVICE = 'mps' if platform.machine() == 'arm64' else 'cpu'
+else:
+    import torch
+    _DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
 _HALF        = _DEVICE in ('cuda', 'mps')   # FP16 on GPU/MPS, ~50% faster inference
 STATIC_DIR   = Path(__file__).parent / 'static'
 CHUNK_FRAMES = 2000
