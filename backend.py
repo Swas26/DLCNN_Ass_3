@@ -63,7 +63,7 @@ def _get_model() -> YOLO:
 
 def _process_chunk(job_id: str, orig_path: str,
                    chunk_idx: int, start_frame: int, end_frame: int,
-                   fps: float, w: int, h: int,
+                   fps: float, w: int,  h: int,
                    skip: int, conf: float) -> tuple:
     ann_path = f"{orig_path}_chunk{chunk_idx}.avi"
     cap      = cv2.VideoCapture(orig_path)
