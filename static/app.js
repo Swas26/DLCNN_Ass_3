@@ -408,18 +408,21 @@ function renderTable(data) {
 
   const brandIndex = Object.fromEntries(brands.map((b, i) => [b, i]));
 
-  // Pre-compute peak frames — pick frame with most total pixel area for each brand
+  // Pre-compute peak frames — score = box_count * total_area (rewards more boxes + larger coverage)
   data._peaks = {};
   for (const f of frames) {
-    const areaTotals = {};
+    const areaTotals  = {};
+    const countTotals = {};
     for (const d of f.detections) {
       const b = d.bbox;
       const area = (b.x2 - b.x1) * (b.y2 - b.y1);
-      areaTotals[d.brand] = (areaTotals[d.brand] || 0) + area;
+      areaTotals[d.brand]  = (areaTotals[d.brand]  || 0) + area;
+      countTotals[d.brand] = (countTotals[d.brand] || 0) + 1;
     }
     for (const [brand, area] of Object.entries(areaTotals)) {
-      if (!data._peaks[brand] || area > data._peaks[brand].area)
-        data._peaks[brand] = { area, frame: f };
+      const score = countTotals[brand] * area;
+      if (!data._peaks[brand] || score > data._peaks[brand].score)
+        data._peaks[brand] = { score, frame: f };
     }
   }
 
