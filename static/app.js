@@ -408,12 +408,18 @@ function renderTable(data) {
 
   const brandIndex = Object.fromEntries(brands.map((b, i) => [b, i]));
 
-  // Pre-compute peak frames so updateTableLive can inject seek buttons
+  // Pre-compute peak frames — pick frame with most total pixel area for each brand
   data._peaks = {};
   for (const f of frames) {
+    const areaTotals = {};
     for (const d of f.detections) {
-      if (!data._peaks[d.brand] || d.confidence > data._peaks[d.brand].conf)
-        data._peaks[d.brand] = { conf: d.confidence, frame: f };
+      const b = d.bbox;
+      const area = (b.x2 - b.x1) * (b.y2 - b.y1);
+      areaTotals[d.brand] = (areaTotals[d.brand] || 0) + area;
+    }
+    for (const [brand, area] of Object.entries(areaTotals)) {
+      if (!data._peaks[brand] || area > data._peaks[brand].area)
+        data._peaks[brand] = { area, frame: f };
     }
   }
 
