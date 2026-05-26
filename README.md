@@ -6,9 +6,9 @@ F1 sponsor brand detection web app — upload race footage, get per-frame detect
 
 ## How it works
 
-Each video is run through a YOLOv8 model trained on F1 sponsor logos. Every frame is passed through inference, bounding boxes are drawn on the annotated output, and detection data is aggregated into brand-level stats.
+Each video is run through a YOLO11m model trained on F1 sponsor logos. Every frame is passed through inference, bounding boxes are drawn on the annotated output, and detection data is aggregated into brand-level stats.
 
-The backend splits videos into 2000-frame chunks processed in parallel threads, with batched inference (8 frames per model call) and hardware H.264 encoding on Apple Silicon via VideoToolbox.
+The backend splits videos into 2000-frame chunks processed in parallel threads, with batched inference (16/32 frames per model instances) and hardware H.264 encoding on Apple Silicon via VideoToolbox.
 
 ---
 
@@ -32,7 +32,7 @@ pip install -r requirements.txt
 
 **Apple Silicon (M1/M2/M3):** inference runs automatically on MPS — no extra setup needed.
 
-**CUDA (Windows/Linux):** install the matching torch build from [pytorch.org](https://pytorch.org) before `pip install -r requirements.txt`, then replace the `torch` and `torchvision` lines in `requirements.txt` with your CUDA build.
+**CUDA (Windows/Linux with NVIDIA GPU):** install the matching torch build from [pytorch.org](https://pytorch.org) before `pip install -r requirements.txt`, then replace the `torch` and `torchvision` lines in `requirements.txt` with your CUDA build.
 
 ---
 
@@ -167,7 +167,7 @@ These constants at the top of `backend.py` control performance:
 | Constant | Default | Effect |
 |---|---|---|
 | `CHUNK_FRAMES` | `2000` | Frames per parallel processing chunk |
-| `BATCH_SIZE` | `8` | Frames batched per model call |
+| `BATCH_SIZE` | `32` | Frames batched per model call |
 
 Larger `BATCH_SIZE` improves GPU/MPS throughput. Smaller `CHUNK_FRAMES` creates more parallel threads but increases overhead.
 
